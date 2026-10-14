@@ -1,0 +1,29 @@
+{
+  "name": "sol-radar",
+  "version": "1.0.0",
+  "description": "Анализ рынка Solana в реальном времени",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --mac"
+  },
+  "devDependencies": {
+    "electron": "^44.7.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "app.solradar",
+    "productName": "SOL Radar",
+    "mac": {
+      "category": "public.app-category.finance",
+      "target": [
+        "dmg"
+      ]
+    },
+    "files": [
+      "*.js",
+      "*.html",
+      "config.json"
+    ]
+  }
+}

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'">
+<title>SOL Radar</title>
+<style>
+:root{color-scheme:dark light;--bg:#f5f6fa;--card:#fff;--tx:#14161f;--mut:#6b7285;--bd:#e3e6ee;--up:#0f9d68;--dn:#d6334a;--ac:#7c4dff;--warn:#c98a00}
+@media(prefers-color-scheme:dark){:root{--bg:#0d0f16;--card:#161925;--tx:#e8eaf2;--mut:#8b92a8;--bd:#262a3b;--up:#2ee59d;--dn:#ff5c75;--ac:#9a7dff;--warn:#ffc233}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:13px/1.45 -apple-system,system-ui,sans-serif;padding:0 14px 14px}
+header{-webkit-app-region:drag;padding:14px 0 10px 70px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+h1{font-size:16px;margin:0}h2{font-size:12px;margin:0 0 10px;color:var(--mut);text-transform:uppercase;letter-spacing:.05em}
+.wrap{display:grid;gap:12px}.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;min-width:0}
+.grid{display:grid;gap:12px;grid-template-columns:2fr 1fr}@media(max-width:800px){.grid{grid-template-columns:1fr}}
+.price{font-size:30px;font-weight:700}.up{color:var(--up)}.dn{color:var(--dn)}.mut{color:var(--mut)}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}.kpi{border:1px solid var(--bd);border-radius:8px;padding:8px}.kpi b{display:block;font-size:16px}
+canvas{width:100%;height:220px;display:block}.tbl{overflow-x:auto}table{border-collapse:collapse;width:100%;min-width:760px}
+th,td{padding:7px 8px;text-align:right;border-bottom:1px solid var(--bd);white-space:nowrap}th:first-child,td:first-child{text-align:left}th{color:var(--mut);font-weight:500;font-size:11px}
+tr.k{cursor:pointer}tr.k:hover{background:color-mix(in srgb,var(--ac) 8%,transparent)}
+.pill{padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600}
+.r-l{background:color-mix(in srgb,var(--up) 18%,transparent);color:var(--up)}.r-m{background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn)}.r-h{background:color-mix(in srgb,var(--dn) 18%,transparent);color:var(--dn)}
+.btns{display:flex;gap:6px;margin-bottom:8px}button{background:none;border:1px solid var(--bd);color:var(--tx);padding:4px 10px;border-radius:8px;cursor:pointer;font:inherit}button.on{background:var(--ac);border-color:var(--ac);color:#fff}
+.feed{max-height:320px;overflow:auto;display:grid;gap:8px;align-content:start}.post{border-bottom:1px solid var(--bd);padding-bottom:8px}.post[data-u]{cursor:pointer}.src{font-size:11px;font-weight:700;color:var(--ac)}
+.bar{height:8px;border-radius:4px;background:var(--bd);overflow:hidden;margin-top:6px}.bar i{display:block;height:100%}
+.chip{font-size:11px;padding:2px 8px;border-radius:99px;border:1px solid var(--bd)}.ok{color:var(--up)}.err{color:var(--dn)}
+.note{font-size:12px;color:var(--mut)}
+input,select{background:var(--bg);color:var(--tx);border:1px solid var(--bd);border-radius:6px;padding:3px 6px;font:inherit}
+</style></head><body>
+<header><h1>◎ SOL Radar</h1><div id="status" style="display:flex;gap:6px;flex-wrap:wrap;-webkit-app-region:no-drag"></div></header>
+<div class="wrap">
+ <div class="grid">
+  <div class="card"><h2>SOL/USD · прогноз</h2><div><span class="price" id="p">—</span> <span id="chg"></span> <span class="mut">за 2 ч</span></div>
+   <canvas id="ch"></canvas>
+   <div class="kpis"><div class="kpi"><span class="mut">Прогноз 5 мин</span><b id="f5">—</b></div><div class="kpi"><span class="mut">Прогноз 1 час</span><b id="f60">—</b></div><div class="kpi"><span class="mut">Уверенность</span><b id="conf">—</b></div></div></div>
+  <div class="card"><h2>Настроение рынка</h2><div style="font-size:24px;font-weight:700" id="mood">—</div><div class="bar"><i id="moodbar"></i></div><div id="srcs" style="margin-top:12px;display:grid;gap:6px"></div>
+   <p class="note">X и Discord подключаются через config.json (см. README).</p></div>
+ </div>
+ <div class="grid">
+  <div class="card"><h2>График SOL/USD <span id="tfb" style="margin-left:8px"></span></h2><canvas id="cc" style="height:300px"></canvas>
+   <div class="note">Свечи · EMA9 (фиолетовая) · EMA21 (жёлтая) · пунктир — уровни сигнала</div></div>
+  <div class="card"><h2>Сигнал</h2>
+   <div id="vbanner" class="note" style="border:1px solid var(--warn);border-radius:8px;padding:6px 8px;margin-bottom:8px"></div>
+   <div id="sig" style="font-size:26px;font-weight:700">—</div><div id="sigsub" class="mut"></div>
+   <div id="plan" style="margin:10px 0;display:grid;gap:4px"></div>
+   <label class="note">Депозит, $ <input id="dep" type="number" value="1000" min="1" style="width:90px"></label>
+   <label class="note">Риск, % <input id="rsk" type="number" value="1" min="0.1" max="5" step="0.1" style="width:60px"></label>
+   <label id="fl" class="note"><input type="checkbox" id="force"> Показать уровни и размер позиции (на свой риск)</label>
+   <div id="size" style="margin:10px 0;display:grid;gap:4px"></div>
+   <div id="why" class="note"></div>
+   <p class="note">⚠️ Не финансовый совет. Сигнал — результат простой модели без бэктеста; возможны убытки, плечо их усиливает.</p></div>
+ </div>
+ <div class="card"><h2>Бэктест сигнала</h2>
+  <div class="btns" style="align-items:center;flex-wrap:wrap">
+   <label class="note">Период <select id="btd"><option value="1">1 день</option><option value="3" selected>3 дня</option><option value="7">7 дней</option></select></label>
+   <label class="note">Мин. уверенность, % <input id="btc" type="number" value="55" min="30" max="80" style="width:60px"></label>
+   <button id="btr" class="on">Запустить</button><span id="bts" class="note"></span></div>
+  <div id="btout"></div>
+  <p class="note">Допущения: комиссия 0,05% за сторону, без проскальзывания и фандинга; если в свече задеты и стоп и тейк, считается стоп; тональность соцсетей на истории не учитывается; удержание не дольше 60 минут. Результаты прошлого не гарантируют будущих.</p></div>
+ <div class="card"><h2>Сканер монет · где вообще есть преимущество</h2>
+  <div class="btns" style="align-items:center;flex-wrap:wrap">
+   <label class="note">История <select id="scd"><option value="30">30 дней</option><option value="60" selected>60 дней</option><option value="90">90 дней</option></select></label>
+   <button id="scs">Загрузить данные монет</button><button id="scb" class="on">Сканировать</button><span id="scp" class="note"></span></div>
+  <div id="sco"></div>
+  <p class="note">28 монет разной ликвидности, ~60 дней минуток — это около 2,4 млн свечей (≈120 МБ в базе), загрузка занимает несколько минут. Для каждой монеты та же диагностика признаков; порог значимости ужесточён поправкой на число проверок, издержки = комиссия 0,1% + спред из стакана. Спред — замер на момент сканирования; реальные издержки на волатильном рынке и при крупных суммах выше.</p></div>
+ <div class="card"><h2>Исследование модели · walk-forward</h2>
+  <div id="dbs" class="note">…</div>
+  <div class="btns" style="align-items:center;flex-wrap:wrap;margin-top:8px">
+   <label class="note">История <select id="syd"><option value="30">30 дней</option><option value="90" selected>90 дней</option><option value="180">180 дней</option></select></label>
+   <button id="sy">Загрузить историю</button><button id="wfb" class="on">Запустить проверку</button><button id="dgb">Диагностика признаков</button><button id="tkb">Отчёт по токенам</button><span id="wfs" class="note"></span></div>
+  <div id="dgo"></div><div id="wfo"></div><div id="tko"></div>
+  <p class="note">Как это устроено: на каждом окне обучения подбираются веса и пороги, затем они проверяются на следующем, невиданном окне (вне выборки). Сравнение идёт со случайным входом и «купи и держи». Тональность соцсетей на истории не учитывается. Результаты прошлого не гарантируют будущего.</p></div>
+ <div class="card"><h2>Новые токены Solana</h2><div class="btns" id="flt"></div>
+  <div class="tbl"><table><thead><tr><th>Токен</th><th>Цена</th><th>Возраст</th><th>Ликвидн.</th><th>Объём 24ч</th><th>5м</th><th>1ч</th><th>Волат.</th><th>Упоминания</th><th>Прогноз 15м</th><th>Риск</th></tr></thead><tbody id="tb"></tbody></table></div>
+  <p class="note">Клик по строке открывает токен в DexScreener. Прогнозы — эвристика, не финансовый совет.</p></div>
+ <div class="card"><h2>Лента: X · Reddit · Discord · Новости</h2><div class="feed" id="feed"></div></div>
+</div>
+<script src="renderer.js"></script></body></html>
